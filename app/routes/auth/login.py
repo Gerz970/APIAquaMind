@@ -282,7 +282,7 @@ def refresh_token():
 
 # Endpoint adicional para obtener lista de usuarios (comentado por seguridad)
 @auth.route('/auth/get_users', methods=['GET'])
-#@jwt_required()  # Comentado para testing
+@jwt_required()  # Comentado para testing
 def get_list_users():
     """
     Obtener una lista de usuarios. Requiere bearer token.
@@ -300,7 +300,8 @@ def get_list_users():
       401:
         description: Unauthorized
     """
-    current_user = "test" #get_jwt_identity()  # Comentado para testing
+    current_user = get_jwt_identity()  # Comentado para testing
+    print(current_user)
     if not current_user:
         return jsonify({"error": "Unauthorized"}), 401
     
