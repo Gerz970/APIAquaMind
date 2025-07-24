@@ -24,6 +24,7 @@ if parent_dir not in sys.path:
 # Importar create_app
 from app import create_app
 
+
 # Crear la instancia de la aplicación usando el patrón Factory
 # Esto permite crear la app con diferentes configuraciones según el entorno
 app = create_app()

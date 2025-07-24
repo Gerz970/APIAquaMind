@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  apiaquamind:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apiaquamind-api
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      PYTHONUNBUFFERED: 1
+      PYTHONPATH: /app/app
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./app/config.py:/app/config.py:ro # <-- aquí la ruta corregida
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - apiaquamind-network
+
+networks:
+  apiaquamind-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

@@ -527,3 +527,7 @@ def verify_current_token():
             "message": "Ocurrió un error durante la verificación del token"
         }), 500
 
+@auth.route("/health", methods=["GET"])
+def health_check():
+    # Aquí podrías comprobar DB, colas, etc. 
+    return jsonify(status="ok"), 200
