@@ -125,13 +125,18 @@ def register_blueprints(app):
     """
     # Importar los blueprints (se hace aquí para evitar imports circulares)
     from routes.auth.login import auth
-    from routes.usuarios.routes_usuario import usuarios
+    from routes.routes_usuario import usuarios
+    from routes.routes_nodos import nodos
+    from routes.routes_eventos import eventos
+    from routes.routes_recomendaciones import recomendaciones
     
     # Registrar cada blueprint con su prefijo de URL
     # API_PREFIX viene de la configuración (ej: /api/v1)
     app.register_blueprint(auth, url_prefix=app.config['API_PREFIX'])
     app.register_blueprint(usuarios, url_prefix=app.config['API_PREFIX'])
-
+    app.register_blueprint(nodos, url_prefix=app.config['API_PREFIX'])
+    app.register_blueprint(eventos, url_prefix=app.config['API_PREFIX'])
+    app.register_blueprint(recomendaciones, url_prefix=app.config['API_PREFIX'])
 
 def register_error_handlers(app):
     """

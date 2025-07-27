@@ -18,7 +18,7 @@ class TbUsuario(Base):
     fecha_nacimiento = Column(DateTime, nullable=True)
     id_tipo_usuario = Column(Integer, nullable=False, default=1)
     id_estatus = Column(Integer, nullable=False, default=1)
-    fecha_registro = Column(DateTime, nullable=False, server_default=func.now())
+    fecha_registro = Column(DateTime, nullable=False)
 
 
     def __init__(
