@@ -24,7 +24,7 @@ def listar_recomendaciones():
 @recomendaciones.route('/recomendaciones/aleatorias/<int:cantidad>', methods=['GET'])
 def obtener_recomendaciones_aleatorias(cantidad):
     """Obtener recomendaciones aleatorias según la cantidad especificada."""
-    response = obj_recomendaciones.obtener_aleatorias(cantidad)
+    response = obj_recomendaciones.obtener_recomendaciones_aleatorias(cantidad)
     return jsonify(response), 200
 
 @recomendaciones.route('/recomendaciones/recomendacion', methods=['POST'])

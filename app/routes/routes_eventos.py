@@ -27,11 +27,32 @@ def crear_evento():
 def obtener_eventos_fechas():
     """Obtener eventos dentro de un rango de fechas específico."""
     data = request.get_json()
-    response, status = obj_eventos.obtener_eventos_por_fechas(data)
+    
+    # Validar que el JSON esté presente
+    if not data:
+        return jsonify({"message": "Se requiere un JSON con fecha_inicio y fecha_fin"}), 400
+    
+    fecha_inicio = data.get('fecha_inicio')
+    fecha_fin = data.get('fecha_fin')
+    
+    # Validar que los parámetros estén presentes
+    if not fecha_inicio or not fecha_fin:
+        return jsonify({"message": "Los campos fecha_inicio y fecha_fin son requeridos en el JSON"}), 400
+    
+    response, status = obj_eventos.obtener_eventos_por_fecha(fecha_inicio, fecha_fin)
     return jsonify(response), status
 
 @eventos.route('/eventos/evento/periodo/<int:periodo>/tipo/<int:tipo>', methods=['GET'])
 def obtener_eventos_periodos(periodo, tipo):
     """Obtener eventos por período y tipo específico."""
-    response, status = obj_eventos.obtener_eventos_por_periodo_tipo(periodo, tipo)
-    return jsonify(response), status
+    match tipo:
+        case 1:
+            eventos, status = obj_eventos.obtener_eventos_ultimos_dias(periodo)
+        case 2:
+            eventos, status = obj_eventos.obtener_eventos_ultimos_meses(periodo)
+        case 3:
+            eventos, status = obj_eventos.obtener_eventos_ultimos_anios(periodo)
+        case _:
+            return jsonify({"message": "El parámetro 'tipo' debe ser 1 para dias, 2 para meses o 3 para años"}), 400
+
+    return jsonify(eventos), status

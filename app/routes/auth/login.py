@@ -40,65 +40,7 @@ limiter = Limiter(
 @auth.route('/auth/login', methods=['POST'])
 @limiter.limit("5 per minute")  # Limitar a 5 intentos por minuto por IP
 def login():
-    """
-    Endpoint para autenticación de usuarios (login).
-    
-    Este endpoint permite a los usuarios autenticarse en el sistema
-    proporcionando su username y contraseña. Si las credenciales son
-    válidas, retorna un token JWT que debe usarse para acceder a
-    otros endpoints protegidos.
-    
-    Proceso:
-    1. Validar datos de entrada
-    2. Autenticar usuario con el servicio
-    3. Generar token JWT si es exitoso
-    4. Retornar token e información del usuario
-    
-    ---
-    tags:
-      - Authentication
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          required:
-            - username
-            - password
-          properties:
-            user:
-              type: string
-              description: Nombre de usuario
-              example: "usuario123"
-            password:
-              type: string
-              description: Contraseña del usuario
-              example: "MiContraseña123"
-    responses:
-      200:
-        description: Login exitoso, se devuelve el token de acceso
-        schema:
-          type: object
-          properties:
-            token:
-              type: string
-              description: Token JWT para autenticación
-            type:
-              type: string
-              description: Tipo de token (siempre "Bearer")
-            user:
-              type: object
-              description: Información del usuario autenticado
-      400:
-        description: Datos de entrada inválidos o faltantes
-      401:
-        description: Credenciales inválidas
-      429:
-        description: Demasiadas solicitudes (rate limit excedido)
-      500:
-        description: Error interno del servidor
-    """
+    """Autenticar usuario y generar token JWT."""
     try:
         # Obtener datos JSON del request
         data = request.get_json()
@@ -142,34 +84,7 @@ def login():
 @auth.route('/auth/me', methods=['GET'])
 @jwt_required()  # Requiere token JWT válido
 def get_current_user():
-    """
-    Obtener información del usuario actual.
-    
-    Este endpoint permite obtener la información del usuario que está
-    autenticado actualmente usando su token JWT. Es útil para:
-    - Verificar que el token sigue siendo válido
-    - Obtener información actualizada del usuario
-    - Mostrar información del perfil en el frontend
-    
-    ---
-    tags:
-      - Authentication
-    security:
-      - Bearer: []
-    responses:
-      200:
-        description: Información del usuario actual
-        schema:
-          type: object
-          properties:
-            user:
-              type: object
-              description: Información del usuario
-      401:
-        description: Token inválido o no proporcionado
-      500:
-        description: Error interno del servidor
-    """
+    """Obtener información del usuario autenticado actualmente."""
     try:
         # Obtener información del usuario desde el token JWT
         current_user = get_jwt_identity()
@@ -207,37 +122,7 @@ def get_current_user():
 @auth.route('/auth/refresh', methods=['POST'])
 @jwt_required(refresh=True)  # Requiere token de refresh
 def refresh_token():
-    """
-    Refrescar token de acceso.
-    
-    Este endpoint permite renovar un token JWT que está próximo a expirar
-    sin necesidad de que el usuario vuelva a hacer login. Es útil para:
-    - Mantener sesiones activas
-    - Mejorar la experiencia del usuario
-    - Reducir la frecuencia de logins
-    
-    ---
-    tags:
-      - Authentication
-    security:
-      - Bearer: []
-    responses:
-      200:
-        description: Nuevo token de acceso generado
-        schema:
-          type: object
-          properties:
-            token:
-              type: string
-              description: Nuevo token JWT
-            type:
-              type: string
-              description: Tipo de token (siempre "Bearer")
-      401:
-        description: Token de refresh inválido
-      500:
-        description: Error interno del servidor
-    """
+    """Renovar token JWT usando token de refresh."""
     try:
         # Obtener información del usuario desde el token de refresh
         current_user = get_jwt_identity()
@@ -284,22 +169,7 @@ def refresh_token():
 @auth.route('/auth/get_users', methods=['GET'])
 @jwt_required()  # Comentado para testing
 def get_list_users():
-    """
-    Obtener una lista de usuarios. Requiere bearer token.
-    
-    NOTA: Este endpoint está comentado por seguridad. En producción,
-    debería estar protegido con @jwt_required() y verificar permisos
-    de administrador.
-    
-    ---
-    tags:
-      - Authentication
-    responses:
-      200:
-        description: Respuesta exitosa con la lista de usuarios
-      401:
-        description: Unauthorized
-    """
+    """Obtener lista de usuarios (solo para administradores)."""
     current_user = get_jwt_identity()  # Comentado para testing
     print(current_user)
     if not current_user:
@@ -314,60 +184,7 @@ def get_list_users():
 @auth.route('/auth/validate', methods=['POST'])
 @limiter.limit("100 per hour")  # Limitar validaciones por hora
 def validate_jwt_token():
-    """
-    Validar token JWT y verificar que el usuario sea válido en la base de datos.
-    
-    Este endpoint recibe un token JWT y verifica:
-    1. Que el token sea válido y no haya expirado
-    2. Que el usuario del token exista en la base de datos
-    3. Que el usuario esté activo (id_estatus = 1)
-    4. Que la información del token coincida con la BD
-    
-    Es útil para:
-    - Verificar la validez de tokens en el frontend
-    - Validar sesiones antes de operaciones críticas
-    - Refrescar información del usuario
-    
-    ---
-    tags:
-      - Authentication
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          required:
-            - token
-          properties:
-            token:
-              type: string
-              description: Token JWT a validar
-              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    responses:
-      200:
-        description: Token válido y usuario verificado
-        schema:
-          type: object
-          properties:
-            valid:
-              type: boolean
-              description: Indica si el token es válido
-            user:
-              type: object
-              description: Información del usuario verificado
-            message:
-              type: string
-              description: Mensaje descriptivo
-      400:
-        description: Token no proporcionado o formato inválido
-      401:
-        description: Token inválido o usuario no encontrado
-      429:
-        description: Demasiadas solicitudes de validación
-      500:
-        description: Error interno del servidor
-    """
+    """Validar un token JWT específico."""
     try:
         # Obtener datos del request
         data = request.get_json()
@@ -445,37 +262,7 @@ def validate_jwt_token():
 @auth.route('/auth/verify', methods=['GET'])
 @jwt_required()  # Requiere token JWT válido en el header
 def verify_current_token():
-    """
-    Verificar el token JWT actual del usuario.
-    
-    Este endpoint verifica el token JWT que se envía en el header Authorization.
-    Es similar a /auth/me pero específicamente para validación de tokens.
-    
-    ---
-    tags:
-      - Authentication
-    security:
-      - Bearer: []
-    responses:
-      200:
-        description: Token válido y usuario verificado
-        schema:
-          type: object
-          properties:
-            valid:
-              type: boolean
-              description: Indica si el token es válido
-            user:
-              type: object
-              description: Información del usuario verificado
-            token_info:
-              type: object
-              description: Información adicional del token
-      401:
-        description: Token inválido o no proporcionado
-      500:
-        description: Error interno del servidor
-    """
+    """Verificar que el token JWT actual sea válido."""
     try:
         # Obtener información del usuario desde el token JWT
         current_user = get_jwt_identity()
@@ -529,5 +316,5 @@ def verify_current_token():
 
 @auth.route("/health", methods=["GET"])
 def health_check():
-    # Aquí podrías comprobar DB, colas, etc. 
+    """Verificar el estado de salud de la API."""
     return jsonify(status="ok"), 200

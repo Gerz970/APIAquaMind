@@ -44,5 +44,8 @@ def eliminar_usuario(id_usuario):
 @usuarios.route('/usuarios/usuario/<int:id_usuario>', methods=['GET'])
 def obtener_usuario(id_usuario):
     """Obtener un usuario específico por ID."""
-    response, status = obj_usuarios.obtener_por_id(id_usuario)
-    return jsonify(response), status
+    response = obj_usuarios.obtener_por_id(id_usuario)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Usuario no encontrado"}), 404

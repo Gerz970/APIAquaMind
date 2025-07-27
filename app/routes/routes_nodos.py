@@ -25,8 +25,8 @@ def crear_nodo():
 @nodos.route('/nodos/nodo', methods=['GET'])
 def obtener_nodos():
     """Obtener lista de todos los nodos."""
-    response = obj_nodos.obtener_todos()
-    return jsonify(response), 200
+    response, status = obj_nodos.obtener_todos()
+    return jsonify(response), status
 
 @nodos.route('/nodos/nodo/<int:id_nodo>', methods=['PUT'])
 def actualizar_nodo(id_nodo):
