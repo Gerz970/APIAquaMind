@@ -19,6 +19,7 @@ class TbUsuario(Base):
     id_tipo_usuario = Column(Integer, nullable=False, default=1)
     id_estatus = Column(Integer, nullable=False, default=1)
     fecha_registro = Column(DateTime, nullable=False)
+    imagen_perfil = Column(String(10000), nullable=True, default='')
 
 
     def __init__(
@@ -32,7 +33,8 @@ class TbUsuario(Base):
         fecha_nacimiento: DateTime = None,
         id_tipo_usuario: int = 1,
         id_estatus: int = 1,
-        fecha_registro: DateTime = None
+        fecha_registro: DateTime = None,
+        imagen_perfil: str = ''
     ):
         # Asignaciones con valores por defecto
         self.username = username
@@ -46,7 +48,7 @@ class TbUsuario(Base):
         self.id_estatus = id_estatus
         if fecha_registro:
             self.fecha_registro = fecha_registro
-
+        self.imagen_perfil = imagen_perfil
     @property
     def password(self) -> str:
         """
