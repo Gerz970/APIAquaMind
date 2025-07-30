@@ -90,6 +90,9 @@ def initialize_extensions(app):
         default_limits=["200 per day", "100 per hour"]  # Límites por defecto
     )
     
+    # Inicializar cliente MQTT
+    initialize_mqtt_client(app)
+    
     # Configurar manejadores de errores personalizados para JWT
     @jwt.unauthorized_loader
     def unauthorized_response(callback):
@@ -113,6 +116,58 @@ def initialize_extensions(app):
         }, 401
 
 
+def initialize_mqtt_client(app):
+    """
+    Inicializar cliente MQTT para HiveMQ Cloud.
+    
+    Args:
+        app: Instancia de Flask donde configurar el cliente MQTT
+    """
+    # Verificar si MQTT está habilitado
+    if not app.config.get('MQTT_ENABLED', True):
+        app.logger.info("MQTT está deshabilitado por configuración. No se inicializará el cliente MQTT.")
+        app.mqtt_client = None
+        app.mqtt_message_handler = None
+        app.device_monitor = None
+        return
+    
+    try:
+        from services.mqtt_client import HiveMQClient
+        from services.mqtt_message_handler import MQTTMessageHandler
+        from core.device_monitor import DeviceMonitor
+        
+        # Crear cliente MQTT
+        mqtt_client = HiveMQClient(app.config)
+        
+        # Configurar manejador de mensajes
+        message_handler = MQTTMessageHandler()
+        mqtt_client.message_handler = message_handler
+        
+        # Crear monitor de dispositivos
+        device_monitor = DeviceMonitor(mqtt_client)
+        
+        # Iniciar cliente en un hilo separado
+        import threading
+        mqtt_thread = threading.Thread(target=mqtt_client.start, daemon=True)
+        mqtt_thread.start()
+        
+        # Iniciar monitoreo de dispositivos
+        device_monitor.start_monitoring()
+        
+        # Guardar en app para acceso global
+        app.mqtt_client = mqtt_client
+        app.mqtt_message_handler = message_handler
+        app.device_monitor = device_monitor
+        
+        app.logger.info("Cliente MQTT y monitor de dispositivos inicializados exitosamente")
+        
+    except Exception as e:
+        app.logger.error(f"Error inicializando cliente MQTT: {e}")
+        app.mqtt_client = None
+        app.mqtt_message_handler = None
+        app.device_monitor = None
+
+
 def register_blueprints(app):
     """
     Registrar todos los blueprints de la aplicación.
@@ -129,6 +184,8 @@ def register_blueprints(app):
     from routes.routes_nodos import nodos
     from routes.routes_eventos import eventos
     from routes.routes_recomendaciones import recomendaciones
+    from routes.routes_mqtt import mqtt_control
+    from routes.routes_notificaciones import notificaciones
     
     # Registrar cada blueprint con su prefijo de URL
     # API_PREFIX viene de la configuración (ej: /api/v1)
@@ -137,6 +194,8 @@ def register_blueprints(app):
     app.register_blueprint(nodos, url_prefix=app.config['API_PREFIX'])
     app.register_blueprint(eventos, url_prefix=app.config['API_PREFIX'])
     app.register_blueprint(recomendaciones, url_prefix=app.config['API_PREFIX'])
+    app.register_blueprint(mqtt_control, url_prefix=app.config['API_PREFIX'])
+    app.register_blueprint(notificaciones, url_prefix=app.config['API_PREFIX'])
 
 def register_error_handlers(app):
     """

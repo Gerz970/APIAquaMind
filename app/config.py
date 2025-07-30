@@ -59,6 +59,31 @@ class BaseConfig:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")       # Nivel de logging
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
+    # Configuración MQTT para HiveMQ Cloud
+    MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "ae6dc87b8b334a3997065b77c26a0343.s1.eu.hivemq.cloud")
+    MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", 8883))
+    MQTT_USERNAME = os.getenv("MQTT_USERNAME", "AngelaGlz")
+    MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "4791384739An.")
+    MQTT_CLIENT_ID = os.getenv("MQTT_CLIENT_ID", "aquamind-api-client")
+    MQTT_USE_SSL = os.getenv("MQTT_USE_SSL", "True").lower() == "true"
+    MQTT_VERSION = int(os.getenv("MQTT_VERSION", 5))
+    
+    # Tópicos MQTT
+    MQTT_TOPICS = {
+        'SYSTEM_STATUS': 'status/sistema',
+        'FLOW_SENSOR': 'sensor/flujo',
+        'VALVE_CONTROL': 'control/valvula',
+        'GATE_CONTROL': 'control/compuerta',
+        'RELAY_CONTROL': 'control/releb'
+    }
+    
+    # Configuración de monitoreo
+    MQTT_MONITORING_INTERVAL = int(os.getenv("MQTT_MONITORING_INTERVAL", 30))  # segundos
+    MQTT_DATA_RETENTION_DAYS = int(os.getenv("MQTT_DATA_RETENTION_DAYS", 90))
+    
+    # Control de habilitación MQTT
+    MQTT_ENABLED = os.getenv("MQTT_ENABLED", "True").lower() == "true"
+    
     @classmethod
     def validate_config(cls) -> list:
         """
@@ -178,3 +203,16 @@ class Config(BaseConfig):
     RATELIMIT_STORAGE_URL = BaseConfig.RATELIMIT_STORAGE_URL
     LOG_LEVEL = BaseConfig.LOG_LEVEL
     LOG_FORMAT = BaseConfig.LOG_FORMAT
+    
+    # Configuraciones MQTT
+    MQTT_BROKER_HOST = BaseConfig.MQTT_BROKER_HOST
+    MQTT_BROKER_PORT = BaseConfig.MQTT_BROKER_PORT
+    MQTT_USERNAME = BaseConfig.MQTT_USERNAME
+    MQTT_PASSWORD = BaseConfig.MQTT_PASSWORD
+    MQTT_CLIENT_ID = BaseConfig.MQTT_CLIENT_ID
+    MQTT_USE_SSL = BaseConfig.MQTT_USE_SSL
+    MQTT_VERSION = BaseConfig.MQTT_VERSION
+    MQTT_TOPICS = BaseConfig.MQTT_TOPICS
+    MQTT_MONITORING_INTERVAL = BaseConfig.MQTT_MONITORING_INTERVAL
+    MQTT_DATA_RETENTION_DAYS = BaseConfig.MQTT_DATA_RETENTION_DAYS
+    MQTT_ENABLED = BaseConfig.MQTT_ENABLED
