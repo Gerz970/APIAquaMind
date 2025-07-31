@@ -375,3 +375,6 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db 
+
+#para ignorar el cache de pycache
+__pycache__/

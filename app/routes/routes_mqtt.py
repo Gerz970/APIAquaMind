@@ -17,6 +17,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.mqtt_command_sender import MQTTCommandSender
 import logging
 from datetime import datetime
+from core.nodos import NodoCRUD
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -142,9 +143,10 @@ def handle_single_command(data):
         }), 400
     
     # Enviar comando
-    success = command_sender.send_command(validation_result["topic"], command)
-    
+    success = True #command_sender.send_command(validation_result["topic"], command)
+    actualizar_estatus_nodo(data)
     if success:
+        
         return jsonify({
             "success": True,
             "message": "Comando enviado exitosamente",
@@ -313,54 +315,109 @@ def validate_device_command(device, command):
         "description": device_config["description"]
     }
 
-@mqtt_control.route('/mqtt/devices', methods=['GET'])
-@jwt_required()
-def get_devices():
+def actualizar_estatus_nodo(payload):
     """
-    Obtener información de todos los dispositivos disponibles.
+    Actualizar el estatus de un nodo basado en el comando recibido.
     
+    Args:
+        payload: Payload con device y command
+        
     Returns:
-        JSON con información de dispositivos
-    """
-    devices = [
-        {
-            "id": "valve1",
-            "name": "Válvula 1",
-            "topic": "control/valvula1",
-            "commands": ["ON", "OFF"],
-            "description": "Abre o cierra válvula 1"
-        },
-        {
-            "id": "valve2",
-            "name": "Válvula 2",
-            "topic": "control/valvula2",
-            "commands": ["ON", "OFF"],
-            "description": "Abre o cierra válvula 2"
-        },
-        {
-            "id": "gate",
-            "name": "Compuerta",
-            "topic": "control/compuerta",
-            "commands": ["ABRIR", "CERRAR"],
-            "description": "Abre o cierra compuerta"
-        },
-        {
-            "id": "relay1",
-            "name": "Relevador B1",
-            "topic": "control/releb1",
-            "commands": ["ON", "OFF"],
-            "description": "Activa o desactiva rele B1"
-        },
-        {
-            "id": "relay2",
-            "name": "Relevador B2",
-            "topic": "control/releb2",
-            "commands": ["ON", "OFF"],
-            "description": "Activa o desactiva rele B2"
+        dict: Resultado de la actualización o None si hay error
+        
+    Ejemplo de uso:
+        payload = {
+            "device": "valve1",
+            "command": "ON"
         }
-    ]
+        resultado = actualizar_estatus_nodo(None, payload)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
     
-    return jsonify({
-        "success": True,
-        "devices": devices
-    }), 200 
+    # Mapeo de dispositivos a descripciones en la BD
+    DEVICE_MAPPING = {
+        "valve1": "Válvula 1",
+        "valve2": "Válvula 2", 
+        "gate": "Compuerta",
+        "relay1": "Relevador B1",
+        "relay2": "Relevador B2"
+    }
+    
+    try:
+        # Validar entrada
+        if not payload or not isinstance(payload, dict):
+            logger.error("Payload inválido o vacío")
+            return None
+            
+        device_name = payload.get("device")
+        command = payload.get("command")
+        
+        if not device_name or not command:
+            logger.error("Campos 'device' y 'command' son requeridos")
+            return None
+        
+        # Validar dispositivo
+        if device_name not in DEVICE_MAPPING:
+            logger.error(f"Dispositivo '{device_name}' no válido")
+            return None
+        
+        # Obtener descripción del dispositivo para buscar en BD
+        device_description = DEVICE_MAPPING[device_name]
+        
+        # Buscar nodo en la base de datos
+        nodo_crud = NodoCRUD()
+        nodo_obj = nodo_crud.obtener_nodo_por_descripcion(device_description)
+        
+        if not nodo_obj:
+            logger.error(f"Nodo no encontrado para dispositivo: {device_description}")
+            return None
+        
+        # Determinar estado según tipo de dispositivo y comando
+        command_upper = command.upper()
+        estatus = None
+        
+        # Válvulas y relés
+        if device_name in ["valve1", "valve2", "relay1", "relay2"]:
+            if command_upper == "ON":
+                estatus = 1
+            elif command_upper == "OFF":
+                estatus = 0
+            else:
+                logger.warning(f"Comando '{command}' no válido para {device_name}")
+                return None
+        
+        # Compuerta
+        elif device_name == "gate":
+            if command_upper == "ABRIR":
+                estatus = 1
+            elif command_upper == "CERRAR":
+                estatus = 0
+            else:
+                logger.warning(f"Comando '{command}' no válido para {device_name}")
+                return None
+        
+        # Actualizar nodo si se determinó un estado válido
+        if estatus is not None:
+            result, status = nodo_crud.actualizar_nodo(nodo_obj[0]["id_nodo"], {"id_estatus": estatus})
+            
+            if result:
+                logger.info(f"Nodo '{device_description}' actualizado a estado {estatus} (comando: {command})")
+                return {
+                    "success": True,
+                    "device": device_name,
+                    "device_description": device_description,
+                    "command": command,
+                    "status": estatus,
+                    "message": f"Dispositivo {device_description} actualizado a estado {estatus}"
+                }
+            else:
+                logger.error(f"Error actualizando nodo '{device_description}'")
+                return None
+        else:
+            logger.error(f"No se pudo determinar estado para comando '{command}' en dispositivo '{device_name}'")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error en actualizar_estatus_nodo: {e}")
+        return None

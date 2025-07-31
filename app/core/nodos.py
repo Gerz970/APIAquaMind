@@ -74,3 +74,14 @@ class NodoCRUD:
         finally:
             session.close()
     
+    def obtener_nodo_por_descripcion(self, descripcion: str) -> dict:
+        session = get_session()
+        try:
+            nodo_obj = session.query(TbNodo).filter(TbNodo.descripcion == descripcion).first()
+            if not nodo_obj:
+                return {"message": "Nodo no encontrado"}, 404
+            return nodo_obj.to_dict(), 200
+        except Exception as e:
+            return {"message": "Error al obtener el nodo", "error": str(e)}, 500
+        finally:
+            session.close()
