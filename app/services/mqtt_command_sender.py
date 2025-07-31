@@ -139,7 +139,7 @@ class MQTTCommandSender:
             return False
         
         command = command.upper()
-        valid_commands = ["ON", "OFF", "OPEN", "CLOSE"]
+        valid_commands = ["ON", "OFF", "ABRIR", "CERRAR"]
         
         return command in valid_commands
     

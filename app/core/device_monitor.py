@@ -67,7 +67,7 @@ class DeviceMonitor:
                 self._check_device_states()
                 
                 # Verificar alertas
-                self._check_alerts()
+                # self._check_alerts()
                 
                 # Procesar datos acumulados
                 self._process_accumulated_data()
@@ -159,7 +159,7 @@ class DeviceMonitor:
             self._check_flow_sensor_alerts()
             
             # Verificar timeouts de dispositivos
-            self._check_device_timeouts()
+            # self._check_device_timeouts()
             
         except Exception as e:
             self.logger.error(f"Error verificando alertas: {e}")

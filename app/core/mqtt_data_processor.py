@@ -35,7 +35,7 @@ class MQTTDataProcessor:
         """
         try:
             # Crear nodo de sensor de flujo
-            nodo_data = {
+            """nodo_data = {
                 'tipo': 'sensor_flujo',
                 'valor': flow_value,
                 'unidad': 'L/min',
@@ -43,8 +43,16 @@ class MQTTDataProcessor:
                 'estado': 'activo',
                 'descripcion': f'Sensor de flujo - Lectura: {flow_value} L/min'
             }
+            """
+            evento_data = {
+                'id_nodo': 1,
+                'fecha_evento': timestamp,
+                'id_estatus': 1,
+                'consumo': flow_value,
+                'unidad_medida': 'L/min'
+            }
             
-            response, status = self.nodos_crud.crear_nodo(nodo_data)
+            response, status = self.eventos_crud.crear_evento(evento_data)
             
             if status == 201:
                 self.logger.info(f"Datos de flujo guardados exitosamente: {flow_value} L/min")
