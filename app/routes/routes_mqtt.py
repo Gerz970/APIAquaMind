@@ -143,7 +143,7 @@ def handle_single_command(data):
         }), 400
     
     # Enviar comando
-    success = True #command_sender.send_command(validation_result["topic"], command)
+    success = command_sender.send_command(validation_result["topic"], command)
     actualizar_estatus_nodo(data)
     if success:
         
