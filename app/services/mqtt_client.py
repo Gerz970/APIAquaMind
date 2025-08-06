@@ -91,6 +91,7 @@ class HiveMQClient:
         topics = [
             (self.config['MQTT_TOPICS']['SYSTEM_STATUS'], 1),
             (self.config['MQTT_TOPICS']['FLOW_SENSOR'], 1),
+            (self.config['MQTT_TOPICS']['WATER_LEVEL'], 1),
             (f"{self.config['MQTT_TOPICS']['VALVE_CONTROL']}1", 1),
             (f"{self.config['MQTT_TOPICS']['VALVE_CONTROL']}2", 1),
             (self.config['MQTT_TOPICS']['GATE_CONTROL'], 1),

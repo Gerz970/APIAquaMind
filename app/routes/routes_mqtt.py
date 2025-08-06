@@ -421,3 +421,302 @@ def actualizar_estatus_nodo(payload):
     except Exception as e:
         logger.error(f"Error en actualizar_estatus_nodo: {e}")
         return None
+
+@mqtt_control.route('/mqtt/water-level', methods=['GET'])
+def get_water_level():
+    """
+    Obtener datos del sensor de nivel de agua.
+    
+    Returns:
+        JSON con información del nivel de agua actual
+        
+    Ejemplo de respuesta:
+    {
+        "success": true,
+        "data": {
+            "distancia": 15.5,
+            "desnivel": false,
+            "bomba": false,
+            "compuerta": false,
+            "nivel_estado": "NORMAL",
+            "timestamp": "2024-01-15T10:30:00",
+            "interpretacion": {
+                "nivel": "Normal",
+                "descripcion": "El nivel de agua está dentro de los parámetros normales",
+                "recomendacion": "No se requiere acción inmediata"
+            }
+        }
+    }
+    """
+    try:
+        # Verificar si MQTT está habilitado
+        mqtt_enabled = current_app.config.get('MQTT_ENABLED', True)
+        
+        if not mqtt_enabled:
+            return jsonify({
+                "success": False,
+                "error": "MQTT está deshabilitado por configuración"
+            }), 503
+        
+        # Verificar si el cliente MQTT está disponible
+        if not hasattr(current_app, 'mqtt_client') or current_app.mqtt_client is None:
+            return jsonify({
+                "success": False,
+                "error": "Cliente MQTT no disponible"
+            }), 503
+        
+        # Verificar si el manejador de mensajes está disponible
+        if not hasattr(current_app, 'mqtt_message_handler') or current_app.mqtt_message_handler is None:
+            return jsonify({
+                "success": False,
+                "error": "Manejador de mensajes MQTT no disponible"
+            }), 503
+        
+        # Obtener los últimos datos del sensor de nivel de agua
+        # Por ahora, retornamos datos de ejemplo hasta que implementemos el almacenamiento
+        # En una implementación real, estos datos vendrían de la base de datos o cache
+        
+        # Simular datos de ejemplo (en producción esto vendría de la BD)
+        water_level_data = {
+            "distancia": 18.5,
+            "desnivel": False,
+            "bomba": False,
+            "compuerta": False,
+            "nivel_estado": "NORMAL",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Determinar interpretación del nivel
+        interpretacion = interpretar_nivel_agua(water_level_data)
+        
+        response_data = {
+            "success": True,
+            "data": water_level_data,
+            "interpretacion": interpretacion
+        }
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo datos del nivel de agua: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Error interno del servidor"
+        }), 500
+
+def interpretar_nivel_agua(water_data):
+    """
+    Interpretar los datos del nivel de agua y proporcionar recomendaciones.
+    
+    Args:
+        water_data: Diccionario con datos del nivel de agua
+        
+    Returns:
+        dict: Interpretación y recomendaciones
+    """
+    distancia = water_data.get('distancia', 0)
+    desnivel = water_data.get('desnivel', False)
+    bomba = water_data.get('bomba', False)
+    compuerta = water_data.get('compuerta', False)
+    nivel_estado = water_data.get('nivel_estado', 'UNKNOWN')
+    
+    # Determinar nivel y descripción
+    if desnivel:
+        nivel = "Crítico"
+        descripcion = "Se ha detectado un desnivel en el sistema de agua"
+        recomendacion = "Verificar inmediatamente el sistema y activar protocolos de emergencia"
+        color = "red"
+    elif nivel_estado == "CRITICO":
+        nivel = "Crítico"
+        descripcion = "El nivel de agua está en estado crítico"
+        recomendacion = "Activar sistemas de drenaje y verificar la causa"
+        color = "red"
+    elif nivel_estado == "ALTO":
+        nivel = "Alto"
+        descripcion = "El nivel de agua está por encima de lo normal"
+        recomendacion = "Considerar abrir compuertas de drenaje"
+        color = "orange"
+    elif nivel_estado == "NORMAL":
+        nivel = "Normal"
+        descripcion = "El nivel de agua está dentro de los parámetros normales"
+        recomendacion = "No se requiere acción inmediata"
+        color = "green"
+    elif nivel_estado == "BAJO":
+        nivel = "Bajo"
+        descripcion = "El nivel de agua está por debajo de lo normal"
+        recomendacion = "Verificar suministro de agua"
+        color = "yellow"
+    elif nivel_estado == "MUY_BAJO":
+        nivel = "Muy Bajo"
+        descripcion = "El nivel de agua está muy por debajo de lo normal"
+        recomendacion = "Activar sistemas de bombeo y verificar suministro"
+        color = "red"
+    else:
+        nivel = "Desconocido"
+        descripcion = "No se puede determinar el estado del nivel de agua"
+        recomendacion = "Verificar el funcionamiento del sensor"
+        color = "gray"
+    
+    # Información adicional sobre dispositivos
+    dispositivos = {
+        "bomba": {
+            "estado": "Activa" if bomba else "Inactiva",
+            "descripcion": "Bomba de drenaje está funcionando" if bomba else "Bomba de drenaje está detenida"
+        },
+        "compuerta": {
+            "estado": "Abierta" if compuerta else "Cerrada",
+            "descripcion": "Compuerta de control está abierta" if compuerta else "Compuerta de control está cerrada"
+        }
+    }
+    
+    return {
+        "nivel": nivel,
+        "descripcion": descripcion,
+        "recomendacion": recomendacion,
+        "color": color,
+        "dispositivos": dispositivos,
+        "medicion": {
+            "distancia": f"{distancia} cm",
+            "interpretacion": f"Distancia desde el sensor hasta la superficie del agua"
+        }
+    }
+
+@mqtt_control.route('/mqtt/water-level/history', methods=['GET'])
+def get_water_level_history():
+    """
+    Obtener historial de datos del sensor de nivel de agua.
+    
+    Query Parameters:
+        - days: Número de días a consultar (por defecto 7)
+        - limit: Número máximo de registros (por defecto 100)
+        
+    Returns:
+        JSON con historial de datos del nivel de agua
+        
+    Ejemplo de respuesta:
+    {
+        "success": true,
+        "data": {
+            "period": "7 días",
+            "total_records": 50,
+            "records": [
+                {
+                    "distancia": 15.5,
+                    "desnivel": false,
+                    "bomba": false,
+                    "compuerta": false,
+                    "nivel_estado": "NORMAL",
+                    "timestamp": "2024-01-15T10:30:00"
+                }
+            ],
+            "statistics": {
+                "promedio_distancia": 16.2,
+                "max_distancia": 25.0,
+                "min_distancia": 8.5,
+                "alertas_desnivel": 2,
+                "activaciones_bomba": 5
+            }
+        }
+    }
+    """
+    try:
+        # Obtener parámetros de consulta
+        days = request.args.get('days', 7, type=int)
+        limit = request.args.get('limit', 100, type=int)
+        
+        # Validar parámetros
+        if days < 1 or days > 365:
+            return jsonify({
+                "success": False,
+                "error": "El parámetro 'days' debe estar entre 1 y 365"
+            }), 400
+        
+        if limit < 1 or limit > 1000:
+            return jsonify({
+                "success": False,
+                "error": "El parámetro 'limit' debe estar entre 1 y 1000"
+            }), 400
+        
+        # Verificar si MQTT está habilitado
+        mqtt_enabled = current_app.config.get('MQTT_ENABLED', True)
+        
+        if not mqtt_enabled:
+            return jsonify({
+                "success": False,
+                "error": "MQTT está deshabilitado por configuración"
+            }), 503
+        
+        # Por ahora, retornamos datos de ejemplo
+        # En una implementación real, estos datos vendrían de la base de datos
+        
+        # Simular historial de datos
+        from datetime import timedelta
+        import random
+        
+        records = []
+        base_time = datetime.now()
+        
+        for i in range(min(limit, 50)):  # Máximo 50 registros de ejemplo
+            # Simular datos variados
+            distancia = random.uniform(8.0, 25.0)
+            desnivel = random.choice([True, False, False, False])  # 25% probabilidad de desnivel
+            bomba = desnivel  # Bomba activa si hay desnivel
+            compuerta = random.choice([True, False])
+            
+            # Determinar estado del nivel
+            if desnivel:
+                nivel_estado = "CRITICO"
+            elif distancia <= 10:
+                nivel_estado = "ALTO"
+            elif distancia <= 20:
+                nivel_estado = "NORMAL"
+            elif distancia <= 30:
+                nivel_estado = "BAJO"
+            else:
+                nivel_estado = "MUY_BAJO"
+            
+            # Crear timestamp
+            timestamp = base_time - timedelta(hours=i*2)  # Cada 2 horas
+            
+            record = {
+                "distancia": round(distancia, 1),
+                "desnivel": desnivel,
+                "bomba": bomba,
+                "compuerta": compuerta,
+                "nivel_estado": nivel_estado,
+                "timestamp": timestamp.isoformat()
+            }
+            
+            records.append(record)
+        
+        # Calcular estadísticas
+        distancias = [r['distancia'] for r in records]
+        alertas_desnivel = sum(1 for r in records if r['desnivel'])
+        activaciones_bomba = sum(1 for r in records if r['bomba'])
+        
+        statistics = {
+            "promedio_distancia": round(sum(distancias) / len(distancias), 1),
+            "max_distancia": round(max(distancias), 1),
+            "min_distancia": round(min(distancias), 1),
+            "alertas_desnivel": alertas_desnivel,
+            "activaciones_bomba": activaciones_bomba
+        }
+        
+        response_data = {
+            "success": True,
+            "data": {
+                "period": f"{days} días",
+                "total_records": len(records),
+                "records": records,
+                "statistics": statistics
+            }
+        }
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo historial del nivel de agua: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Error interno del servidor"
+        }), 500

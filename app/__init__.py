@@ -166,6 +166,10 @@ def initialize_mqtt_client(app):
         app.mqtt_client = None
         app.mqtt_message_handler = None
         app.device_monitor = None
+        
+        # Iniciar generación de datos dummy cuando MQTT está apagado
+        app.logger.info("MQTT no disponible - Iniciando generación de datos dummy")
+        start_dummy_data_generation(app)
 
 
 def register_blueprints(app):
@@ -186,6 +190,8 @@ def register_blueprints(app):
     from routes.routes_recomendaciones import recomendaciones
     from routes.routes_mqtt import mqtt_control
     from routes.routes_notificaciones import notificaciones
+    from routes.routes_configuraciones import configuraciones
+    from routes.routes_niveles_agua import niveles_agua
     
     # Registrar cada blueprint con su prefijo de URL
     # API_PREFIX viene de la configuración (ej: /api/v1)
@@ -196,6 +202,8 @@ def register_blueprints(app):
     app.register_blueprint(recomendaciones, url_prefix=app.config['API_PREFIX'])
     app.register_blueprint(mqtt_control, url_prefix=app.config['API_PREFIX'])
     app.register_blueprint(notificaciones, url_prefix=app.config['API_PREFIX'])
+    app.register_blueprint(configuraciones, url_prefix=app.config['API_PREFIX'])
+    app.register_blueprint(niveles_agua, url_prefix=app.config['API_PREFIX'])
 
 def register_error_handlers(app):
     """
@@ -243,4 +251,52 @@ def register_error_handlers(app):
             "code": 400,
             "error": "Bad request",
             "message": "La solicitud es incorrecta o está mal formada."
-        }), 400 
+        }), 400
+
+
+def start_dummy_data_generation(app):
+    """
+    Iniciar generación automática de datos dummy cuando MQTT está apagado.
+    
+    Args:
+        app: Instancia de Flask
+    """
+    import threading
+    import time
+    from datetime import datetime
+    from core.mqtt_data_processor import MQTTDataProcessor
+    
+    def generate_dummy_data_loop():
+        """
+        Loop que genera datos dummy cada 30 segundos.
+        """
+        data_processor = MQTTDataProcessor()
+        
+        while True:
+            try:
+                # Verificar si MQTT sigue apagado
+                if hasattr(app, 'mqtt_client') and app.mqtt_client:
+                    app.logger.info("MQTT disponible - Deteniendo generación de datos dummy")
+                    break
+                
+                # Generar y procesar datos dummy
+                app.logger.info("Generando datos dummy del nivel de agua...")
+                success = data_processor.process_dummy_water_level_data()
+                
+                if success:
+                    app.logger.info("Datos dummy procesados exitosamente")
+                else:
+                    app.logger.warning("Error procesando datos dummy")
+                
+                # Esperar 30 segundos antes de la siguiente generación
+                time.sleep(30)
+                
+            except Exception as e:
+                app.logger.error(f"Error en loop de datos dummy: {e}")
+                time.sleep(30)  # Esperar antes de reintentar
+    
+    # Iniciar el loop en un hilo separado
+    dummy_thread = threading.Thread(target=generate_dummy_data_loop, daemon=True)
+    dummy_thread.start()
+    
+    app.logger.info("Generación automática de datos dummy iniciada") 

@@ -105,7 +105,8 @@ class UserValidator:
         Example:
             is_valid, error_msg = UserValidator.validate_password("MiPass123")
             if not is_valid:
-                print(f"Error: {error_msg}")
+                # Manejar el error según sea necesario
+                pass
         """
         # Verificar longitud mínima
         if len(password) < 8:
@@ -193,7 +194,8 @@ class UserValidator:
             })
             if errors:
                 for error in errors:
-                    print(f"Error en {error['field']}: {error['message']}")
+                    # Manejar el error según sea necesario
+                    pass
         """
         errors = []
         

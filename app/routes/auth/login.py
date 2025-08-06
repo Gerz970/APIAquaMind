@@ -171,7 +171,6 @@ def refresh_token():
 def get_list_users():
     """Obtener lista de usuarios (solo para administradores)."""
     current_user = get_jwt_identity()  # Comentado para testing
-    print(current_user)
     if not current_user:
         return jsonify({"error": "Unauthorized"}), 401
     

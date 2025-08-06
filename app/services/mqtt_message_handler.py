@@ -15,6 +15,7 @@ import json
 import logging
 from datetime import datetime
 from core.mqtt_data_processor import MQTTDataProcessor
+from core.configuraciones import ConfiguracionCRUD
 
 class MQTTMessageHandler:
     def __init__(self):
@@ -23,6 +24,7 @@ class MQTTMessageHandler:
         """
         self.logger = logging.getLogger(__name__)
         self.data_processor = MQTTDataProcessor()
+        self.config = ConfiguracionCRUD()
         
     def process_message(self, topic, payload, timestamp):
         """
@@ -40,6 +42,8 @@ class MQTTMessageHandler:
                 self.handle_system_status(payload, timestamp)
             elif topic == "sensor/flujo":
                 self.handle_flow_sensor(payload, timestamp)
+            elif topic == "sensor/nivelAgua":
+                self.handle_water_level(payload, timestamp)
             elif topic.startswith("control/valvula"):
                 self.handle_valve_status(topic, payload, timestamp)
             elif topic == "control/compuerta":
@@ -101,6 +105,103 @@ class MQTTMessageHandler:
             
         except Exception as e:
             self.logger.error(f"Error procesando datos de flujo: {e}")
+    
+    def handle_water_level(self, payload, timestamp):
+        """
+        Manejar datos del sensor de nivel de agua.
+        
+        Args:
+            payload: Datos JSON del sensor de nivel de agua
+            timestamp: Timestamp del mensaje
+        """
+        try:
+            # Parsear JSON del payload
+            if payload:
+                try:
+                    data = json.loads(payload)
+                    
+                    # Extraer datos del JSON
+                    distancia = data.get('distancia', 0.0)
+                    desnivel = data.get('desnivel', False)
+                    bomba = data.get('bomba', False)
+                    compuerta = data.get('compuerta', False)
+                    
+                    # Validar datos
+                    if not isinstance(distancia, (int, float)):
+                        distancia = 0.0
+                    if not isinstance(desnivel, bool):
+                        desnivel = False
+                    if not isinstance(bomba, bool):
+                        bomba = False
+                    if not isinstance(compuerta, bool):
+                        compuerta = False
+                    
+                    # Determinar estado del nivel de agua
+                    nivel_estado, porcentaje_agua = self.determine_water_level_status(distancia, desnivel)
+                    # Crear objeto con todos los datos
+                    water_data = {
+                        'distancia': distancia,
+                        'desnivel': desnivel,
+                        'bomba': bomba,
+                        'compuerta': compuerta,
+                        'nivel_estado': nivel_estado,
+                        'porcentaje_agua': porcentaje_agua,
+                        'timestamp': timestamp.isoformat()
+                    }
+                    
+                    self.data_processor.save_water_level_data(water_data, timestamp)
+                    self.logger.info(f"Datos de nivel de agua procesados: {water_data}")
+                    
+                except json.JSONDecodeError:
+                    self.logger.error(f"Error parseando JSON del sensor de nivel de agua: {payload}")
+            else:
+                self.logger.warning("Payload vacío del sensor de nivel de agua")
+                
+        except Exception as e:
+            self.logger.error(f"Error procesando datos de nivel de agua: {e}")
+    
+    def determine_water_level_status(self, distancia, desnivel):
+        """
+        Determinar el estado del nivel de agua basado en distancia y desnivel.
+        
+        Args:
+            distancia: Distancia en centímetros desde el sensor
+            desnivel: Boolean que indica si hay desnivel
+            
+        Returns:
+            str: Estado del nivel de agua
+        """
+
+        altura_tanque = self.config.obtener_valor_configuracion("AlturaContenedor")[0]
+        umbral_alto = self.config.obtener_valor_configuracion("umbral_alto_nivel")[0]
+        umbral_normal = self.config.obtener_valor_configuracion("umbral_normal_nivel")[0]
+        umbral_bajo = self.config.obtener_valor_configuracion("umbral_bajo_nivel")[0]
+
+        # convertir a float
+        altura_tanque = float(altura_tanque.get("valor", 0))
+        umbral_alto = float(umbral_alto.get("valor", 0))
+        umbral_normal = float(umbral_normal.get("valor", 0))
+        umbral_bajo = float(umbral_bajo.get("valor", 0))
+
+        # calcular el nivel de agua en porcentaje
+        nivel_agua = 100 - ((distancia / altura_tanque) * 100)
+
+        if desnivel is False:
+            if umbral_alto <= nivel_agua:
+                self.logger.info(f"Nivel de agua: {nivel_agua} - ALTO")
+                return "ALTO" , nivel_agua    # Nivel muy alto
+            elif umbral_normal <= nivel_agua:
+                self.logger.info(f"Nivel de agua: {nivel_agua} - NORMAL")
+                return "NORMAL" , nivel_agua   # Nivel normal
+            elif nivel_agua <= umbral_bajo:
+                self.logger.info(f"Nivel de agua: {nivel_agua} - BAJO")
+                return "BAJO" , nivel_agua     # Nivel bajo
+            else:
+                self.logger.info(f"Nivel de agua: {nivel_agua} - MUY_BAJO")
+                return "MUY_BAJO" , nivel_agua # Nivel muy bajo
+        else:
+            self.logger.info(f"Nivel de agua: {nivel_agua} - LLENO")
+            return "LLENO" , nivel_agua
     
     def handle_valve_status(self, topic, payload, timestamp):
         """

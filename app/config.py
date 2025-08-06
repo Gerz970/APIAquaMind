@@ -74,7 +74,8 @@ class BaseConfig:
         'FLOW_SENSOR': 'sensor/flujo',
         'VALVE_CONTROL': 'control/valvula',
         'GATE_CONTROL': 'control/compuerta',
-        'RELAY_CONTROL': 'control/releb'
+        'RELAY_CONTROL': 'control/releb',
+        'WATER_LEVEL': 'sensor/nivelAgua'
     }
     
     # Configuración de monitoreo
@@ -99,7 +100,8 @@ class BaseConfig:
             errors = BaseConfig.validate_config()
             if errors:
                 for error in errors:
-                    print(f"Error de configuración: {error}")
+                    # Manejar el error según sea necesario
+                    pass
         """
         errors = []
         
