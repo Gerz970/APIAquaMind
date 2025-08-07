@@ -14,7 +14,20 @@ class EventosCRUD:
         """
         Crea un nuevo evento si no existe uno con el mismo nombre.
         Devuelve el nuevo evento en una lista o None si ya existe.
+        Omite el guardado si el consumo es igual a 0 para evitar valores basura.
         """
+        # Verificar si el consumo es 0 y omitir el guardado
+        consumo = evento_data.get('consumo', 0)
+        
+        # Convertir a float para comparación segura
+        try:
+            consumo_float = float(consumo) if consumo is not None else 0.0
+        except (ValueError, TypeError):
+            consumo_float = 0.0
+        
+        if consumo_float == 0.0:
+            return {"message": "Evento omitido - consumo igual a 0", "success": True}, 200
+        
         session = get_session()
         try:
             nuevo_evento = TbEvento(**evento_data)
