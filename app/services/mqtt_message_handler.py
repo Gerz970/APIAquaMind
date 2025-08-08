@@ -185,6 +185,8 @@ class MQTTMessageHandler:
 
         # calcular el nivel de agua en porcentaje
         nivel_agua = 100 - ((distancia / altura_tanque) * 100)
+        nivel_agua = round(nivel_agua, 2)
+        nivel_agua = 0.0 if nivel_agua < 0.0 else nivel_agua
 
         if desnivel is False:
             if umbral_alto <= nivel_agua:
