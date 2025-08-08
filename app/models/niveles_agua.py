@@ -34,11 +34,11 @@ class TbNivelAgua(Base):
         """
         return {
             'id_nivel': self.id_nivel,
-            'distancia': float(self.distancia) if self.distancia else None,
+            'distancia': float(self.distancia) if self.distancia is not None else 0.0,
             'desnivel': self.desnivel,
             'bomba': self.bomba,
             'compuerta': self.compuerta,
             'nivel_estado': self.nivel_estado,
-            'porcentaje_agua': float(self.porcentaje_agua) if self.porcentaje_agua else None,
+            'porcentaje_agua': float(self.porcentaje_agua) if self.porcentaje_agua is not None else 0.0,
             'fecha': self.fecha.isoformat() if self.fecha else None
         } 

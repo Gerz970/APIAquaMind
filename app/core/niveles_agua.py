@@ -1,8 +1,9 @@
 # Se crea la clase para manejar los niveles de agua
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from utils.connectiondb import get_session
-from models.niveles_agua import TbNivelAgua
 from datetime import datetime, timedelta
+from models.niveles_agua import TbNivelAgua
+from sqlalchemy import func, cast, Date
 
 
 class NivelAguaCRUD:
@@ -353,4 +354,148 @@ class NivelAguaCRUD:
                 "error": f"Error obteniendo último nivel de agua: {str(e)}"
             }, 500
         finally:
-            session.close() 
+            session.close()
+
+    def obtener_ultimo_nivel_con_historial(self) -> tuple:
+        """
+        Obtener el último nivel de agua con historial de los últimos 7 días.
+        
+        Returns:
+            tuple: (response_dict, status_code)
+        """
+        session = get_session()
+        try:
+            # Obtener el último registro
+            ultimo_nivel = session.query(TbNivelAgua)\
+                .order_by(TbNivelAgua.fecha.desc())\
+                .first()
+            
+            if not ultimo_nivel:
+                return {
+                    "success": False,
+                    "error": "No hay registros de nivel de agua"
+                }, 404
+            
+            # Calcular fecha de hace 7 días (sin incluir el día actual)
+            fecha_limite = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
+            
+            # Obtener la última lectura de cada día de los últimos 7 días (sin incluir el día actual)
+            # Usamos una subconsulta para obtener el ID máximo de cada día
+            
+            # Subconsulta para obtener la fecha y el ID máximo de cada día
+            subquery = session.query(
+                cast(TbNivelAgua.fecha, Date).label('fecha_dia'),
+                func.max(TbNivelAgua.id_nivel).label('max_id')
+            ).filter(
+                TbNivelAgua.fecha >= fecha_limite,
+                TbNivelAgua.fecha < datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            ).group_by(
+                cast(TbNivelAgua.fecha, Date)
+            ).subquery()
+            
+            # Obtener los registros correspondientes a los IDs máximos de cada día
+            historial = session.query(TbNivelAgua)\
+                .join(subquery, TbNivelAgua.id_nivel == subquery.c.max_id)\
+                .order_by(TbNivelAgua.fecha.desc())\
+                .all()
+            
+            # Convertir historial a lista de diccionarios
+            historial_data = [nivel.to_dict() for nivel in historial]
+            
+            # Preparar respuesta con interpretación
+            ultimo_data = ultimo_nivel.to_dict()
+            interpretacion = self._interpretar_nivel_agua(ultimo_data)
+            
+            response_data = {
+                "success": True,
+                "data": ultimo_data,
+                "interpretacion": interpretacion,
+                "historial_7_dias": historial_data
+            }
+            
+            return response_data, 200
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error obteniendo último nivel con historial: {str(e)}"
+            }, 500
+        finally:
+            session.close()
+
+    def _interpretar_nivel_agua(self, water_data: dict) -> dict:
+        """
+        Interpretar los datos del nivel de agua y proporcionar recomendaciones.
+        
+        Args:
+            water_data: Diccionario con datos del nivel de agua
+            
+        Returns:
+            dict: Interpretación y recomendaciones
+        """
+        distancia = water_data.get('distancia', 0)
+        desnivel = water_data.get('desnivel', 'False') == 'True'
+        bomba = water_data.get('bomba', 'False') == 'True'
+        compuerta = water_data.get('compuerta', 'False') == 'True'
+        nivel_estado = water_data.get('nivel_estado', 'UNKNOWN')
+        
+        # Determinar nivel y descripción
+        if desnivel:
+            nivel = "Crítico"
+            descripcion = "Se ha detectado un desnivel en el sistema de agua"
+            recomendacion = "Verificar inmediatamente el sistema y activar protocolos de emergencia"
+            color = "red"
+        elif nivel_estado == "CRITICO":
+            nivel = "Crítico"
+            descripcion = "El nivel de agua está en estado crítico"
+            recomendacion = "Activar sistemas de drenaje y verificar la causa"
+            color = "red"
+        elif nivel_estado == "ALTO":
+            nivel = "Alto"
+            descripcion = "El nivel de agua está por encima de lo normal"
+            recomendacion = "Considerar abrir compuertas de drenaje"
+            color = "orange"
+        elif nivel_estado == "NORMAL":
+            nivel = "Normal"
+            descripcion = "El nivel de agua está dentro de los parámetros normales"
+            recomendacion = "No se requiere acción inmediata"
+            color = "green"
+        elif nivel_estado == "BAJO":
+            nivel = "Bajo"
+            descripcion = "El nivel de agua está por debajo de lo normal"
+            recomendacion = "Verificar suministro de agua"
+            color = "yellow"
+        elif nivel_estado == "MUY_BAJO":
+            nivel = "Muy Bajo"
+            descripcion = "El nivel de agua está muy por debajo de lo normal"
+            recomendacion = "Activar sistemas de bombeo y verificar suministro"
+            color = "red"
+        else:
+            nivel = "Desconocido"
+            descripcion = "No se puede determinar el estado del nivel de agua"
+            recomendacion = "Verificar el funcionamiento del sensor"
+            color = "gray"
+        
+        # Información adicional sobre dispositivos
+        dispositivos = {
+            "bomba": {
+                "estado": "Activa" if bomba else "Inactiva",
+                "descripcion": "Bomba de drenaje está funcionando" if bomba else "Bomba de drenaje está detenida"
+            },
+            "compuerta": {
+                "estado": "Abierta" if compuerta else "Cerrada",
+                "descripcion": "Compuerta de control está abierta" if compuerta else "Compuerta de control está cerrada"
+            }
+        }
+        
+        return {
+            "nivel": nivel,
+            "descripcion": descripcion,
+            "recomendacion": recomendacion,
+            "color": color,
+            "dispositivos": dispositivos,
+            "medicion": {
+                "distancia": f"{distancia} cm",
+                "interpretacion": "Distancia desde el sensor hasta la superficie del agua"
+            }
+        } 

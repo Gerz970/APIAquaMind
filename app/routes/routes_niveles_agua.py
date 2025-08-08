@@ -188,4 +188,71 @@ def obtener_estadisticas_nivel():
         return jsonify({
             "success": False,
             "error": "Error interno del servidor"
+        }), 500
+
+@niveles_agua.route('/niveles-agua/actual-con-historial', methods=['GET'])
+def obtener_ultimo_nivel_con_historial():
+    """
+    Obtener el último nivel de agua con historial de los últimos 7 días.
+    
+    Returns:
+        JSON con el último nivel de agua, interpretación y historial de 7 días
+        (una lectura por día, la última de cada día)
+        
+    Ejemplo de respuesta:
+    {
+        "success": true,
+        "data": {
+            "distancia": 18.5,
+            "desnivel": "False",
+            "bomba": "False", 
+            "compuerta": "False",
+            "nivel_estado": "NORMAL",
+            "fecha": "2024-01-15T10:30:00",
+            "porcentaje_agua": 30.00
+        },
+        "interpretacion": {
+            "nivel": "Normal",
+            "descripcion": "El nivel de agua está dentro de los parámetros normales",
+            "recomendacion": "No se requiere acción inmediata",
+            "color": "green",
+            "dispositivos": {
+                "bomba": {
+                    "estado": "Inactiva",
+                    "descripcion": "Bomba de drenaje está detenida"
+                },
+                "compuerta": {
+                    "estado": "Cerrada",
+                    "descripcion": "Compuerta de control está cerrada"
+                }
+            },
+            "medicion": {
+                "distancia": "18.5 cm",
+                "interpretacion": "Distancia desde el sensor hasta la superficie del agua"
+            }
+        },
+        "historial_7_dias": [
+            {
+                "id_nivel": 123,
+                "distancia": 15.5,
+                "desnivel": "False",
+                "bomba": "False",
+                "compuerta": "False", 
+                "nivel_estado": "NORMAL",
+                "porcentaje_agua": 45.00,
+                "fecha": "2024-01-14T15:30:00"
+            }
+            // Una entrada por día de los últimos 7 días (sin incluir el día actual)
+        ]
+    }
+    """
+    try:
+        response, status = obj_niveles_agua.obtener_ultimo_nivel_con_historial()
+        return jsonify(response), status
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo último nivel con historial: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Error interno del servidor"
         }), 500 
