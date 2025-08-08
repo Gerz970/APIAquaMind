@@ -169,7 +169,7 @@ def initialize_mqtt_client(app):
         
         # Iniciar generación de datos dummy cuando MQTT está apagado
         app.logger.info("MQTT no disponible - Iniciando generación de datos dummy")
-        start_dummy_data_generation(app)
+        #start_dummy_data_generation(app)
 
 
 def register_blueprints(app):
@@ -281,7 +281,8 @@ def start_dummy_data_generation(app):
                 
                 # Generar y procesar datos dummy
                 app.logger.info("Generando datos dummy del nivel de agua...")
-                success = data_processor.process_dummy_water_level_data()
+                #success = data_processor.process_dummy_water_level_data()
+                success = True
                 
                 if success:
                     app.logger.info("Datos dummy procesados exitosamente")
