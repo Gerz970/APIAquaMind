@@ -4,7 +4,7 @@
 # ===========================================
 # STAGE 1: Build stage - Instalar dependencias
 # ===========================================
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bullseye AS builder
 
 # Establecer variables de entorno para Python
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -35,7 +35,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # ===========================================
 # STAGE 2: Runtime stage - Imagen final
 # ===========================================
-FROM python:3.11-slim
+FROM python:3.11-slim-bullseye
 
 # Establecer variables de entorno
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -62,11 +62,9 @@ ENV PYTHONPATH=/app/app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-
 # Copiar código de la aplicación
 COPY app/config.py .   
 COPY app/ ./app/
-
 
 # Crear directorio para logs y dar permisos
 RUN mkdir -p /app/logs && \
@@ -83,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
 # Comando para ejecutar la aplicación
-CMD ["python", "-m", "app.main"] 
+CMD ["python", "-m", "app.main"]
